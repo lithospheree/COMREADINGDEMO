@@ -20,14 +20,21 @@ namespace COM_OPEN
 {
     public partial class Form1 : Form
     {
+        private Timer timer;
+        private DataLogger dataLogger;
         
         public Form1()
         {
             InitializeComponent();
 
-            populatePorts();
+            dataLogger = new DataLogger();
 
-            loggerTest();
+            formsPlot2.Plot.Add.Plottable(dataLogger);
+            formsPlot2.Plot.Title("Serial Graph");
+
+            formsPlot2.Refresh();
+
+            populatePorts();
         }
 
         private void populatePorts()
@@ -65,11 +72,18 @@ namespace COM_OPEN
 
             try
             {
-                SerialPort serialPort = new SerialPort(port, 921600, Parity.None, 8, StopBits.One);
-                serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
-                serialPort.Open();
-                
-                serialPort.Write("Hello World!");
+                SerialPort _serialPort = new SerialPort();
+                _serialPort.PortName = port;
+                _serialPort.BaudRate = 115200;
+                _serialPort.Parity = Parity.None;
+                _serialPort.DataBits = 8;
+                _serialPort.StopBits = StopBits.One;
+                _serialPort.Handshake = Handshake.None;
+
+                _serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+
+                _serialPort.Open();
+                _serialPort.WriteLine("Hello World!");
             }
             catch (Exception ex) 
             {
@@ -78,33 +92,27 @@ namespace COM_OPEN
                 
         }
 
-        private static void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e)
+        private void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e)
         {
             SerialPort sp = (SerialPort)sender;
             string data = sp.ReadLine();
-            string[] dataSplit = data.Select(s => s.ToString()).ToArray();
-
-        }
-
-        private void updateLogger(int id, int value)
-        {
-
+            Console.WriteLine(data);
+            dataLogger.Add(1, 4);
+            dataLogger.Add(2, 6);
+            dataLogger.Add(11, 11);
+            if (formsPlot2.InvokeRequired)
+            {
+                formsPlot2.Invoke(new Action(() => formsPlot2.Plot.Axes.AutoScale()));
+                formsPlot2.Invoke(new Action(() => formsPlot2.Refresh()));
+            }
+            else
+            {
+                formsPlot2.Refresh();
+            }
         }
 
         private void formsPlot2_Load(object sender, EventArgs e)
         {
-        }
-
-        private void loggerTest()
-        {
-            var logger = formsPlot2.Plot.Add.DataLogger();
-            for (int i = 0; i < 100000; i++)
-            {
-                double y = Generate.RandomWalker.Next();
-
-                logger.Add(i, y);
-            }
-            formsPlot2.Refresh();
         }
     }
 }
